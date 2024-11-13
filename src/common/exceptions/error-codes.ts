@@ -1,0 +1,24 @@
+export const ErrorCodes = {
+  // Auth errors
+  INVALID_CREDENTIALS: 'AUTH001',
+  EMAIL_ALREADY_EXISTS: 'AUTH002',
+  INVALID_TOKEN: 'AUTH003',
+  TOKEN_EXPIRED: 'AUTH004',
+
+  // User errors
+  USER_NOT_FOUND: 'USER001',
+  INVALID_USER_DATA: 'USER002',
+
+  // Validation errors
+  VALIDATION_ERROR: 'VAL001',
+
+  // Database errors
+  DATABASE_ERROR: 'DB001',
+  UNIQUE_CONSTRAINT: 'DB002',
+
+  // General errors
+  BAD_REQUEST: 'GEN001',
+  NOT_FOUND: 'GEN002',
+  UNAUTHORIZED: 'GEN003',
+  FORBIDDEN: 'GEN004',
+} as const;
