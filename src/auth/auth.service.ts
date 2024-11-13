@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { LoginDto } from './dto/login.dto';
 import { UserRepository } from 'src/users/repositories/user.repository';
 import { CacheKey, CacheTTL } from '@nestjs/cache-manager';
@@ -25,7 +25,7 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await argon2.hash(dto.password);
 
     const user = await this.userRepository.create({
       email: dto.email,
@@ -48,7 +48,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.userRepository.findByEmail(dto.email);
 
-    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+    if (!user || !(await argon2.verify(user.password, dto.password))) {
       throw new UnauthorizedException('Invalid email or password');
     }
 

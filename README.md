@@ -49,7 +49,7 @@ yarn prisma:studio
 
 ### Mengakses Layanan
 
-- API: http://localhost:3001
+- API: http://localhost:3000
 - Prisma Studio: http://localhost:5555
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379

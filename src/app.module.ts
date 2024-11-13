@@ -1,13 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-<<<<<<< HEAD
-
-@Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
-=======
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -49,6 +42,5 @@ import { HistoryModule } from './history/history.module';
       useClass: CacheInterceptor,
     },
   ],
->>>>>>> bb45769 (feat: mvp api)
 })
 export class AppModule {}

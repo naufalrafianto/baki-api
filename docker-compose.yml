@@ -2,10 +2,11 @@ version: '3.9'
 services:
   api:
     build:
+      dockerfile: Dockerfile
       context: .
-      dockerfile: Dockerfile.dev
+      target: development
     ports:
-      - '3001:3001'
+      - '3000:3000'
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
@@ -19,6 +20,9 @@ services:
     depends_on:
       - postgres
       - redis
+    env_file:
+      - .env
+    command: yarn start:dev
 
   postgres:
     image: postgres:17-alpine
@@ -30,6 +34,11 @@ services:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${DB_USER}']
+      interval: 30s
+      retries: 3
+      timeout: 30s
 
   redis:
     image: redis:7-alpine
@@ -37,6 +46,11 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      retries: 3
+      timeout: 5s
 
 volumes:
   postgres_data:

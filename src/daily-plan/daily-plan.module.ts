@@ -4,6 +4,6 @@ import { DailyPlanController } from './daily-plan.controller';
 
 @Module({
   providers: [DailyPlanService],
-  controllers: [DailyPlanController]
+  controllers: [DailyPlanController],
 })
 export class DailyPlanModule {}
