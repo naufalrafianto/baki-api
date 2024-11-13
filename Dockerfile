@@ -1,79 +1,51 @@
-###################
-# BUILD FOR LOCAL DEVELOPMENT
-###################
-FROM node:20-alpine AS development
+# Stage 1: Dependencies
+FROM node:20.11.1-alpine3.19 AS deps
+RUN apk add --no-cache libc6-compat netcat-openbsd
+WORKDIR /app
 
-# Create app directory
-WORKDIR /usr/src/app
-
-# Copy application dependency manifests to the container image.
-COPY --chown=node:node package*.json yarn.lock ./
-
-# Copy Prisma schema files first
-COPY --chown=node:node prisma ./prisma/
-
-# Install app dependencies using Yarn
+# Install Yarn
+COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-# Generate Prisma client
+# Stage 2: Builder
+FROM node:20.11.1-alpine3.19 AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma Client
 RUN yarn prisma generate
 
-# Bundle app source
-COPY --chown=node:node . .
-
-# Use the node user from the image (instead of the root user)
-USER node
-
-###################
-# BUILD FOR PRODUCTION
-###################
-FROM node:20-alpine AS build
-
-WORKDIR /usr/src/app
-
-COPY --chown=node:node package*.json yarn.lock ./
-COPY --chown=node:node prisma ./prisma/
-
-# In order to run `yarn build`, we need access to the dependencies
-COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node . .
-
-# Run the build command which creates the production bundle
+# Build application
 RUN yarn build
 
-# Set NODE_ENV environment variable
-ENV NODE_ENV production
+# Stage 3: Runner
+FROM node:20.11.1-alpine3.19 AS runner
+RUN apk add --no-cache netcat-openbsd
+WORKDIR /app
 
-# Running `yarn install` removes the existing node_modules directory
-# Passing in --production ensures that only the production dependencies are installed
-RUN yarn install --production --frozen-lockfile && yarn cache clean
+# Install production dependencies
+COPY package.json yarn.lock ./
+RUN yarn install --production --frozen-lockfile
 
-# Generate Prisma client for production
-RUN yarn prisma generate
+# Copy necessary files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY prisma ./prisma
+COPY .env ./
 
-USER node
+# Add OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
-###################
-# PRODUCTION
-###################
-FROM node:20-alpine AS production
+# Create wait-for script
+COPY wait-for.sh ./wait-for.sh
+RUN chmod +x ./wait-for.sh
 
-# Set working directory
-WORKDIR /usr/src/app
+# Create start script
+RUN echo "#!/bin/sh" > ./start.sh && \
+    echo "./wait-for.sh postgres:5432 -- yarn prisma migrate deploy" >> ./start.sh && \
+    echo "node dist/main" >> ./start.sh && \
+    chmod +x ./start.sh
 
-# Copy the bundled code from the build stage to the production image
-COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-COPY --chown=node:node --from=build /usr/src/app/package.json ./
-COPY --chown=node:node --from=build /usr/src/app/prisma ./prisma
-
-# Set environment variables for Prisma
-ENV DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
-
-USER node
-
-# Create entrypoint script
-RUN echo '#!/bin/sh\nset -e\n\n# Run Prisma migrations\nyarn prisma migrate deploy\n\n# Start the application\nexec node dist/main.js' > docker-entrypoint.sh && \
-    chmod +x docker-entrypoint.sh
-
-ENTRYPOINT ["./docker-entrypoint.sh"]
+EXPOSE 3000
+CMD ["./start.sh"]
