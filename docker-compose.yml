@@ -4,10 +4,24 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: deps
     ports:
       - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: >
+      sh -c "
+        echo 'Waiting for postgres...' &&
+        until nc -z postgres 5432; do sleep 1; done &&
+        echo 'PostgreSQL started' &&
+        yarn prisma generate &&
+        yarn prisma migrate dev --name init &&
+        yarn prisma:seed &&
+        yarn start:dev
+      "
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
@@ -16,8 +30,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "./wait-for-it.sh postgres:5432 -- yarn prisma migrate deploy && yarn prisma generate && node dist/main"
-    restart: unless-stopped
 
   postgres:
     image: postgres:17-alpine
