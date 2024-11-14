@@ -9,11 +9,15 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { DailyPlanService } from './daily-plan.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { CreateDailyPlanDto } from './dto/daily-plan.dto';
+import { ApiQuery } from '@nestjs/swagger';
+import { GetDailyPlansQueryDto } from './dto/daily-plan-query.dto';
 
 @Controller('daily-plans')
 @UseGuards(JwtAuthGuard)
@@ -31,6 +35,15 @@ export class DailyPlanController {
     };
   }
 
+  @Get()
+  @ApiQuery({ type: GetDailyPlansQueryDto })
+  async findAll(
+    @GetUser('id') userId: string,
+    @Query() query: GetDailyPlansQueryDto,
+  ) {
+    return this.dailyPlanService.findAll(userId, query);
+  }
+
   @Get('today')
   async getTodayPlan(@GetUser('id') userId: string) {
     const plan = await this.dailyPlanService.findTodayPlan(userId);
@@ -38,5 +51,18 @@ export class DailyPlanController {
       success: true,
       data: plan,
     };
+  }
+
+  @Get(':id')
+  findOne(
+    @GetUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: number,
+  ) {
+    return this.dailyPlanService.findOne(userId, id);
+  }
+
+  @Get('schedule/upcoming')
+  async findUpcoming(@GetUser('id') userId: string) {
+    return this.dailyPlanService.findUpcoming(userId);
   }
 }

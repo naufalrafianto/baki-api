@@ -6,8 +6,20 @@ import {
   IsOptional,
   IsDateString,
   ValidateNested,
+  ArrayMinSize,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export enum DayOfWeek {
+  MONDAY = 'MONDAY',
+  TUESDAY = 'TUESDAY',
+  WEDNESDAY = 'WEDNESDAY',
+  THURSDAY = 'THURSDAY',
+  FRIDAY = 'FRIDAY',
+  SATURDAY = 'SATURDAY',
+  SUNDAY = 'SUNDAY',
+}
 
 export class PlanExerciseDto {
   @IsNumber()
@@ -25,18 +37,20 @@ export class PlanExerciseDto {
 
 export class CreateDailyPlanDto {
   @IsDateString()
-  notificationTime: Date;
+  notificationTime: string;
 
   @IsArray()
-  @IsString({ each: true })
-  repeatDays: string[];
+  @IsEnum(DayOfWeek, { each: true })
+  @ArrayMinSize(1)
+  repeatDays: DayOfWeek[];
 
   @IsString()
-  @IsOptional()
-  label?: string;
+  @IsNotEmpty()
+  label: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PlanExerciseDto)
+  @ArrayMinSize(1)
   exercises: PlanExerciseDto[];
 }

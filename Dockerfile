@@ -1,5 +1,5 @@
 # Stage 1: Dependencies
-FROM node:20.11.1-alpine3.19 AS deps
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat netcat-openbsd
 WORKDIR /app
 
@@ -8,7 +8,7 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
 # Stage 2: Builder
-FROM node:20.11.1-alpine3.19 AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -20,7 +20,7 @@ RUN yarn prisma generate
 RUN yarn build
 
 # Stage 3: Runner
-FROM node:20.11.1-alpine3.19 AS runner
+FROM node:20-alpine AS runner
 RUN apk add --no-cache netcat-openbsd
 WORKDIR /app
 
@@ -47,5 +47,5 @@ RUN echo "#!/bin/sh" > ./start.sh && \
     echo "node dist/main" >> ./start.sh && \
     chmod +x ./start.sh
 
-EXPOSE 3000
+EXPOSE 8080
 CMD ["./start.sh"]
