@@ -69,7 +69,7 @@ export class DailyPlanService {
   async findTodayPlan(userId: string) {
     const dayOfWeek = getDayOfWeek(new Date());
 
-    return this.prisma.dailyPlan.findFirst({
+    return this.prisma.dailyPlan.findMany({
       where: {
         userId,
         isActive: true,
