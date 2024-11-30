@@ -10,12 +10,30 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BaseResponse } from '../common/types/response.type';
+import { GetHistoryQueryDto } from './dto/history-query.dto';
 
 @ApiTags('History')
 @Controller('history')
 @UseGuards(JwtAuthGuard)
 export class HistoryController {
   constructor(private readonly historyService: HistoryService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all session history with filters' })
+  async getAllHistory(
+    @GetUser('id') userId: string,
+    @Query() query: GetHistoryQueryDto,
+  ): Promise<BaseResponse<any>> {
+    const result = await this.historyService.getAllHistory(userId, query);
+    return {
+      success: true,
+      data: result.data,
+      meta: {
+        stats: result.stats,
+        pagination: result.pagination,
+      },
+    };
+  }
 
   @Get('sessions')
   @ApiOperation({ summary: 'Get session history' })

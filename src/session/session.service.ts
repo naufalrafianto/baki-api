@@ -6,13 +6,20 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecordSessionDto } from './dto/session.dto';
-import { getDayOfWeek } from '../common/utils/date.util';
+import {
+  getDayOfWeek,
+  getDayOfWeekWithTimezone,
+} from '../common/utils/date.util';
 
 @Injectable()
 export class SessionService {
   constructor(private prisma: PrismaService) {}
 
-  async recordSession(userId: string, dto: RecordSessionDto) {
+  async recordSession(
+    userId: string,
+    dto: RecordSessionDto,
+    timezone: string = 'Asia/Jakarta',
+  ) {
     try {
       // First verify if the exercise exists in the daily plan
       const planExercise = await this.prisma.planExercise.findFirst({
@@ -36,15 +43,35 @@ export class SessionService {
         );
       }
 
-      // Verify if the plan is for today
-      const today = getDayOfWeek(new Date());
-      if (!planExercise.dailyPlan.repeatDays.includes(today)) {
+      // Verify if the plan is for today using user's timezone
+      const userDate = new Date(dto.startTime); // Use session start time for timezone calculation
+      const todayInUserTimezone = getDayOfWeekWithTimezone(userDate, timezone);
+
+      if (!planExercise.dailyPlan.repeatDays.includes(todayInUserTimezone)) {
         throw new BadRequestException(
-          'This exercise is not scheduled for today',
+          `This exercise is not scheduled for ${todayInUserTimezone.toLowerCase()}`,
         );
       }
 
-      // Verify if exercise is already completed
+      // Get the start and end of day in user's timezone for completion check
+      const startOfDay = new Date(
+        userDate.toLocaleString('en-US', { timeZone: timezone }),
+      );
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(startOfDay);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Convert to UTC for database query
+      const utcStartOfDay = new Date(
+        startOfDay.toLocaleString('en-US', { timeZone: 'UTC' }),
+      );
+      const utcEndOfDay = new Date(
+        endOfDay.toLocaleString('en-US', { timeZone: 'UTC' }),
+      );
+
+      // Check if exercise is already completed today
+
       if (planExercise.isCompleted) {
         throw new BadRequestException(
           'This exercise is already completed for today',

@@ -39,15 +39,14 @@ model Exercise {
 }
 
 model DailyPlan {
-  id               Int            @id @default(autoincrement())
-  user             User           @relation(fields: [userId], references: [id])
-  userId           String
-  label            String?
-  repeatDays       String[] // ["MONDAY", "WEDNESDAY", "FRIDAY"]
-  notificationTime DateTime?
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
-  exercises        PlanExercise[]
+  id         Int            @id @default(autoincrement())
+  user       User           @relation(fields: [userId], references: [id])
+  userId     String
+  label      String?
+  repeatDays String[] // ["MONDAY", "WEDNESDAY", "FRIDAY"]
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  exercises  PlanExercise[]
 
   @@index([userId, isActive])
   @@map("daily_plans")
@@ -59,9 +58,9 @@ model PlanExercise {
   dailyPlanId Int
   exercise    Exercise  @relation(fields: [exerciseId], references: [id])
   exerciseId  Int
-  sets        Int // Number of sets planned
-  reps        Int // Number of reps per set
-  order       Int // Exercise order in plan
+  sets        Int
+  reps        Int
+  order       Int
   isCompleted Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
@@ -79,7 +78,7 @@ model Session {
   totalReps  Int
   startTime  DateTime
   endTime    DateTime
-  status     String    @default("completed") // Only store completed sessions
+  status     String    @default("completed")
   notes      String?
   histories  History[]
   createdAt  DateTime  @default(now())
@@ -96,8 +95,8 @@ model History {
   sessionId Int
   setNumber Int
   reps      Int
-  duration  Int // in seconds
-  metadata  Json? // For additional tracking (weight, difficulty, etc)
+  duration  Int
+  metadata  Json?
   createdAt DateTime @default(now())
 
   @@index([userId, sessionId])

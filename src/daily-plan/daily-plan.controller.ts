@@ -45,8 +45,11 @@ export class DailyPlanController {
   }
 
   @Get('today')
-  async getTodayPlan(@GetUser('id') userId: string) {
-    const plan = await this.dailyPlanService.findTodayPlan(userId);
+  async getTodayPlan(
+    @GetUser('id') userId: string,
+    @Query('timezone') timezone: string = 'Asia/Jakarta',
+  ) {
+    const plan = await this.dailyPlanService.findTodayPlan(userId, timezone);
     return {
       success: true,
       data: plan,

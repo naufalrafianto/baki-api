@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDailyPlanDto } from './dto/daily-plan.dto';
-import { getDayOfWeek } from '../common/utils/date.util';
+import {
+  getDayOfWeek,
+  getDayOfWeekWithTimezone,
+} from '../common/utils/date.util';
 import { GetDailyPlansQueryDto } from './dto/daily-plan-query.dto';
 import { Prisma } from '@prisma/client';
 
@@ -14,7 +17,6 @@ export class DailyPlanService {
       return await this.prisma.dailyPlan.create({
         data: {
           userId,
-          notificationTime: new Date(dto.notificationTime),
           repeatDays: dto.repeatDays,
           label: dto.label,
           isActive: true,
@@ -65,9 +67,22 @@ export class DailyPlanService {
       },
     });
   }
+  async findTodayPlan(userId: string, timezone: string = 'Asia/Jakarta') {
+    // Get current date in user's timezone
+    const today = new Date();
+    const dayOfWeek = getDayOfWeekWithTimezone(today, timezone);
 
-  async findTodayPlan(userId: string) {
-    const dayOfWeek = getDayOfWeek(new Date());
+    // Get the start and end of day in user's timezone
+    const userDate = new Date(
+      today.toLocaleString('en-US', { timeZone: timezone }),
+    );
+    const startOfDay = new Date(userDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(userDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Convert back to UTC for database query
 
     return this.prisma.dailyPlan.findMany({
       where: {
@@ -90,6 +105,18 @@ export class DailyPlanService {
     });
   }
 
+  private formatTimeDistance(minutes: number, status: string): string {
+    if (minutes < 60) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ${status === 'upcoming' ? 'until workout' : 'ago'}`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours} hour${hours !== 1 ? 's' : ''} ${
+      remainingMinutes > 0
+        ? `and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`
+        : ''
+    } ${status === 'upcoming' ? 'until workout' : 'ago'}`;
+  }
   async deactivatePlan(id: number, userId: string) {
     const plan = await this.prisma.dailyPlan.findFirst({
       where: {
@@ -234,9 +261,6 @@ export class DailyPlanService {
             order: 'asc',
           },
         },
-      },
-      orderBy: {
-        notificationTime: 'asc',
       },
     });
   }

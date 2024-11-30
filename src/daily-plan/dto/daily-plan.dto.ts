@@ -3,7 +3,6 @@ import {
   IsArray,
   IsString,
   IsNumber,
-  IsOptional,
   IsDateString,
   ValidateNested,
   ArrayMinSize,
@@ -36,9 +35,6 @@ export class PlanExerciseDto {
 }
 
 export class CreateDailyPlanDto {
-  @IsDateString()
-  notificationTime: string;
-
   @IsArray()
   @IsEnum(DayOfWeek, { each: true })
   @ArrayMinSize(1)
