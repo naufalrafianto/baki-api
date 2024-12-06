@@ -1,14 +1,15 @@
 // src/session/dto/session.dto.ts
+import { Type } from 'class-transformer';
 import {
   IsNumber,
   IsDate,
   IsArray,
   ValidateNested,
   Min,
+  ArrayMinSize,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
-export class SetDataDto {
+export class SessionSetDto {
   @IsNumber()
   @Min(1)
   setNumber: number;
@@ -19,7 +20,7 @@ export class SetDataDto {
 
   @IsNumber()
   @Min(0)
-  duration: number; // in seconds
+  duration: number;
 }
 
 export class RecordSessionDto {
@@ -29,16 +30,69 @@ export class RecordSessionDto {
   @IsNumber()
   exerciseId: number;
 
-  @IsDate()
   @Type(() => Date)
+  @IsDate()
   startTime: Date;
 
-  @IsDate()
   @Type(() => Date)
+  @IsDate()
   endTime: Date;
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => SetDataDto)
-  sets: SetDataDto[];
+  @Type(() => SessionSetDto)
+  @ArrayMinSize(1)
+  sets: SessionSetDto[];
+}
+
+export class RecordSetDto {
+  @IsNumber()
+  dailyPlanId: number;
+
+  @IsNumber()
+  exerciseId: number;
+
+  @IsNumber()
+  @Min(1)
+  setNumber: number;
+
+  @IsNumber()
+  @Min(1)
+  reps: number;
+
+  @IsNumber()
+  @Min(0)
+  duration: number;
+}
+
+export class StartSetDto {
+  @IsNumber()
+  @Min(1)
+  dailyPlanId: number;
+
+  @IsNumber()
+  @Min(1)
+  exerciseId: number;
+
+  @IsNumber()
+  @Min(1)
+  setNumber: number;
+}
+
+export class CompleteSetDto {
+  @IsNumber()
+  @Min(1)
+  dailyPlanId: number;
+
+  @IsNumber()
+  @Min(1)
+  exerciseId: number;
+
+  @IsNumber()
+  @Min(1)
+  setNumber: number;
+
+  @IsNumber()
+  @Min(1)
+  reps: number;
 }

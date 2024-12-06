@@ -189,7 +189,7 @@ export class DailyPlanService {
       }),
     ]);
 
-    // Calculate pagination metadata
+    // Calculate pagination
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
