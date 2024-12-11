@@ -1,6 +1,6 @@
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat netcat-openbsd
+RUN apk add --no-cache libc6-compat netcat-openbsd openssl
 WORKDIR /app
 
 # Install Yarn
