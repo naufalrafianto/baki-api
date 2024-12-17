@@ -27,80 +27,67 @@ export class SessionController {
   constructor(private readonly sessionService: SessionService) {}
 
   @Post('record')
-  @HttpCode(HttpStatus.CREATED)
-  async recordSession(
-    @GetUser('id') userId: string,
-    @Body() dto: RecordSessionDto,
-  ) {
-    try {
-      const session = await this.sessionService.recordSession(userId, dto);
-      return {
-        success: true,
-        data: session,
-        message: 'Session recorded successfully',
-      };
-    } catch (error) {
-      console.error('Error recording session:', error);
-      if (error.status) {
-        throw error; // Rethrow NestJS HTTP exceptions
-      }
-      throw new InternalServerErrorException('Failed to record session');
-    }
-  }
-
-  @Post('start')
-  async startSet(@GetUser('id') userId: string, @Body() dto: StartSetDto) {
+  async recordSet(@GetUser('id') userId: string, @Body() dto: RecordSetDto) {
+    const result = await this.sessionService.recordSet(userId, dto);
     return {
       success: true,
-      data: await this.sessionService.startSet(
-        userId,
-        dto.dailyPlanId,
-        dto.exerciseId,
-        dto.setNumber,
-      ),
+      data: result,
     };
   }
 
-  @Post('/complete')
-  async completeSet(
-    @GetUser('id') userId: string,
-    @Body() dto: CompleteSetDto,
-  ) {
-    return {
-      success: true,
-      data: await this.sessionService.completeSet(
-        userId,
-        dto.dailyPlanId,
-        dto.exerciseId,
-        dto.setNumber,
-        dto.reps,
-      ),
-    };
-  }
+  // @Post('start')
+  // async startSet(@GetUser('id') userId: string, @Body() dto: StartSetDto) {
+  //   return {
+  //     success: true,
+  //     data: await this.sessionService.startSet(
+  //       userId,
+  //       dto.dailyPlanId,
+  //       dto.exerciseId,
+  //       dto.setNumber,
+  //     ),
+  //   };
+  // }
 
-  @Post(':dailyPlanId/:exerciseId/complete')
-  async completeSession(
-    @GetUser('id') userId: string,
-    @Param('dailyPlanId', ParseIntPipe) dailyPlanId: number,
-    @Param('exerciseId', ParseIntPipe) exerciseId: number,
-  ) {
-    return this.sessionService.completeSession(userId, dailyPlanId, exerciseId);
-  }
+  // @Post('/complete')
+  // async completeSet(
+  //   @GetUser('id') userId: string,
+  //   @Body() dto: CompleteSetDto,
+  // ) {
+  //   return {
+  //     success: true,
+  //     data: await this.sessionService.completeSet(
+  //       userId,
+  //       dto.dailyPlanId,
+  //       dto.exerciseId,
+  //       dto.setNumber,
+  //       dto.reps,
+  //     ),
+  //   };
+  // }
 
-  @Get(':dailyPlanId/:exerciseId/progress')
-  async getCurrentSetProgress(
-    @GetUser('id') userId: string,
-    @Param('dailyPlanId', ParseIntPipe) dailyPlanId: number,
-    @Param('exerciseId', ParseIntPipe) exerciseId: number,
-  ) {
-    const progress = await this.sessionService.getCurrentSetProgress(
-      userId,
-      dailyPlanId,
-      exerciseId,
-    );
-    return {
-      success: true,
-      data: progress,
-    };
-  }
+  // @Post(':dailyPlanId/:exerciseId/complete')
+  // async completeSession(
+  //   @GetUser('id') userId: string,
+  //   @Param('dailyPlanId', ParseIntPipe) dailyPlanId: number,
+  //   @Param('exerciseId', ParseIntPipe) exerciseId: number,
+  // ) {
+  //   return this.sessionService.completeSession(userId, dailyPlanId, exerciseId);
+  // }
+
+  // @Get(':dailyPlanId/:exerciseId/progress')
+  // async getCurrentSetProgress(
+  //   @GetUser('id') userId: string,
+  //   @Param('dailyPlanId', ParseIntPipe) dailyPlanId: number,
+  //   @Param('exerciseId', ParseIntPipe) exerciseId: number,
+  // ) {
+  //   const progress = await this.sessionService.getCurrentSetProgress(
+  //     userId,
+  //     dailyPlanId,
+  //     exerciseId,
+  //   );
+  //   return {
+  //     success: true,
+  //     data: progress,
+  //   };
+  // }
 }

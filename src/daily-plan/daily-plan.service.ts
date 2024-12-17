@@ -47,7 +47,7 @@ export class DailyPlanService {
     }
   }
   async findUserActivePlans(userId: string) {
-    return this.prisma.dailyPlan.findMany({
+    const plans = await this.prisma.dailyPlan.findMany({
       where: {
         userId,
         isActive: true,
@@ -66,7 +66,31 @@ export class DailyPlanService {
         createdAt: 'desc',
       },
     });
+
+    // Calculate completion status for each plan
+    return plans.map((plan) => ({
+      ...plan,
+      totalExercises: plan.exercises.length,
+      completedExercises: plan.exercises.filter((ex) => ex.isCompleted).length,
+      isCompleted:
+        plan.exercises.length > 0 &&
+        plan.exercises.every((ex) => ex.isCompleted),
+      progress:
+        plan.exercises.length > 0
+          ? (plan.exercises.filter((ex) => ex.isCompleted).length /
+              plan.exercises.length) *
+            100
+          : 0,
+      exercises: plan.exercises.map((exercise) => ({
+        ...exercise,
+        isCompleted: exercise.isCompleted,
+        exercise: {
+          ...exercise.exercise,
+        },
+      })),
+    }));
   }
+
   async findTodayPlan(userId: string, timezone: string = 'Asia/Jakarta') {
     // Get current date in user's timezone
     const today = new Date();
@@ -83,8 +107,7 @@ export class DailyPlanService {
     endOfDay.setHours(23, 59, 59, 999);
 
     // Convert back to UTC for database query
-
-    return this.prisma.dailyPlan.findMany({
+    const plans = await this.prisma.dailyPlan.findMany({
       where: {
         userId,
         isActive: true,
@@ -103,19 +126,30 @@ export class DailyPlanService {
         },
       },
     });
-  }
 
-  private formatTimeDistance(minutes: number, status: string): string {
-    if (minutes < 60) {
-      return `${minutes} minute${minutes !== 1 ? 's' : ''} ${status === 'upcoming' ? 'until workout' : 'ago'}`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours} hour${hours !== 1 ? 's' : ''} ${
-      remainingMinutes > 0
-        ? `and ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`
-        : ''
-    } ${status === 'upcoming' ? 'until workout' : 'ago'}`;
+    // Add completion status and progress to each plan
+    return plans.map((plan) => ({
+      ...plan,
+      totalExercises: plan.exercises.length,
+      completedExercises: plan.exercises.filter((ex) => ex.isCompleted).length,
+      isCompleted:
+        plan.exercises.length > 0 &&
+        plan.exercises.every((ex) => ex.isCompleted),
+      progress:
+        plan.exercises.length > 0
+          ? (plan.exercises.filter((ex) => ex.isCompleted).length /
+              plan.exercises.length) *
+            100
+          : 0,
+      exercises: plan.exercises.map((exercise) => ({
+        ...exercise,
+        isCompleted: exercise.isCompleted,
+        remainingSets: exercise.isCompleted ? 0 : exercise.sets,
+        exercise: {
+          ...exercise.exercise,
+        },
+      })),
+    }));
   }
   async deactivatePlan(id: number, userId: string) {
     const plan = await this.prisma.dailyPlan.findFirst({

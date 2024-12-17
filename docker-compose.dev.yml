@@ -17,7 +17,7 @@ services:
         echo 'PostgreSQL started' &&
         yarn prisma generate &&
         yarn prisma migrate dev --name init &&
-        yarn prisma:seed &&
+        yarn prisma:seed && 
         yarn start:dev
       "
     environment:

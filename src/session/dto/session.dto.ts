@@ -47,18 +47,16 @@ export class RecordSessionDto {
 
 export class RecordSetDto {
   @IsNumber()
+  @Min(1)
   dailyPlanId: number;
 
   @IsNumber()
+  @Min(1)
   exerciseId: number;
 
   @IsNumber()
   @Min(1)
   setNumber: number;
-
-  @IsNumber()
-  @Min(1)
-  reps: number;
 
   @IsNumber()
   @Min(0)
