@@ -55,10 +55,6 @@ export class RecordSetDto {
   exerciseId: number;
 
   @IsNumber()
-  @Min(1)
-  setNumber: number;
-
-  @IsNumber()
   @Min(0)
   duration: number;
 }

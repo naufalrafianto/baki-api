@@ -25,16 +25,16 @@ export class SessionService {
     return `session_progress:${userId}:${dailyPlanId}:${exerciseId}`;
   }
 
+  private getExerciseProgressKey(
+    userId: string,
+    dailyPlanId: number,
+    exerciseId: number,
+  ): string {
+    return `exercise_progress:${userId}:${dailyPlanId}:${exerciseId}`;
+  }
+
   async recordSet(userId: string, dto: RecordSetDto) {
     try {
-      const key = this.getSessionProgressKey(
-        userId,
-        dto.dailyPlanId,
-        dto.exerciseId,
-      );
-      const progressStr = await this.redis.get(key);
-      const now = new Date().toISOString();
-
       // Get plan exercise and validate
       const planExercise = await this.prisma.planExercise.findFirst({
         where: {
@@ -59,75 +59,47 @@ export class SessionService {
         throw new NotFoundException('Exercise not found in the daily plan');
       }
 
-      let progress = progressStr
-        ? JSON.parse(progressStr)
-        : {
-            userId,
-            exerciseId: dto.exerciseId,
-            dailyPlanId: dto.dailyPlanId,
-            startTime: now,
-            completedSets: [],
-          };
-
-      // Validate set number
-      if (
-        progress.completedSets.some((set) => set.setNumber === dto.setNumber)
-      ) {
+      if (planExercise.isCompleted) {
         throw new BadRequestException(
-          `Set ${dto.setNumber} has already been recorded`,
+          'This exercise has already been completed',
         );
       }
 
-      // Add new set
-      const newSet = {
-        setNumber: dto.setNumber,
-        duration: dto.duration,
-        completedAt: now,
-      };
+      const now = new Date().toISOString();
 
-      progress.completedSets.push(newSet);
+      // Immediately mark the exercise as completed
+      await this.prisma.planExercise.update({
+        where: {
+          id: planExercise.id,
+        },
+        data: {
+          isCompleted: true,
+        },
+      });
 
-      // Save to Redis
-      await this.redis.set(
-        key,
-        JSON.stringify(progress),
-        24 * 60 * 60, // 24 hours TTL
-      );
+      // Count completed exercises for plan progress
+      const completedExercises = planExercise.dailyPlan.exercises.filter(
+        (ex) => (ex.id === planExercise.id ? true : ex.isCompleted),
+      ).length;
 
-      // Check if all sets for this exercise are completed
-      if (progress.completedSets.length === planExercise.sets) {
-        // Update exercise completion status
-        await this.prisma.planExercise.update({
-          where: {
-            id: planExercise.id,
-          },
-          data: {
-            isCompleted: true,
-          },
-        });
-
-        // Clear Redis cache for this exercise as it's complete
-        await this.redis.del(key);
-      }
-
-      // Return response with updated status
       return {
         exerciseId: planExercise.exerciseId,
         exerciseName: planExercise.exercise.name,
         totalSets: planExercise.sets,
-        currentSet: dto.setNumber + 1,
-        lastCompletedSet: newSet,
-        completedSets: progress.completedSets,
-        remainingSets: planExercise.sets - progress.completedSets.length,
-        progress: (progress.completedSets.length / planExercise.sets) * 100,
-        isCompleted: progress.completedSets.length === planExercise.sets,
+        completedSets: [
+          {
+            completed: true,
+            duration: dto.duration,
+            completedAt: now,
+          },
+        ],
+        remainingSets: 0,
+        totalDuration: dto.duration,
+        progress: 100,
+        isCompleted: true,
         planProgress: {
           totalExercises: planExercise.dailyPlan.exercises.length,
-          completedExercises: planExercise.dailyPlan.exercises.filter((ex) =>
-            ex.id === planExercise.id
-              ? progress.completedSets.length === planExercise.sets
-              : ex.isCompleted,
-          ).length,
+          completedExercises: completedExercises,
         },
       };
     } catch (error) {
@@ -135,6 +107,117 @@ export class SessionService {
       throw error;
     }
   }
+
+  // async recordSet(userId: string, dto: RecordSetDto) {
+  //   try {
+  //     const key = this.getSessionProgressKey(
+  //       userId,
+  //       dto.dailyPlanId,
+  //       dto.exerciseId,
+  //     );
+  //     const progressStr = await this.redis.get(key);
+  //     const now = new Date().toISOString();
+
+  //     // Get plan exercise and validate
+  //     const planExercise = await this.prisma.planExercise.findFirst({
+  //       where: {
+  //         dailyPlanId: dto.dailyPlanId,
+  //         exerciseId: dto.exerciseId,
+  //         dailyPlan: {
+  //           userId,
+  //           isActive: true,
+  //         },
+  //       },
+  //       include: {
+  //         exercise: true,
+  //         dailyPlan: {
+  //           include: {
+  //             exercises: true,
+  //           },
+  //         },
+  //       },
+  //     });
+
+  //     if (!planExercise) {
+  //       throw new NotFoundException('Exercise not found in the daily plan');
+  //     }
+
+  //     let progress = progressStr
+  //       ? JSON.parse(progressStr)
+  //       : {
+  //           userId,
+  //           exerciseId: dto.exerciseId,
+  //           dailyPlanId: dto.dailyPlanId,
+  //           startTime: now,
+  //           completedSets: [],
+  //         };
+
+  //     // Validate set number
+  //     if (
+  //       progress.completedSets.some((set) => set.setNumber === dto.setNumber)
+  //     ) {
+  //       throw new BadRequestException(
+  //         `Set ${dto.setNumber} has already been recorded`,
+  //       );
+  //     }
+
+  //     // Add new set
+  //     const newSet = {
+  //       setNumber: dto.setNumber,
+  //       duration: dto.duration,
+  //       completedAt: now,
+  //     };
+
+  //     progress.completedSets.push(newSet);
+
+  //     // Save to Redis
+  //     await this.redis.set(
+  //       key,
+  //       JSON.stringify(progress),
+  //       24 * 60 * 60, // 24 hours TTL
+  //     );
+
+  //     // Check if all sets for this exercise are completed
+  //     if (progress.completedSets.length === planExercise.sets) {
+  //       // Update exercise completion status
+  //       await this.prisma.planExercise.update({
+  //         where: {
+  //           id: planExercise.id,
+  //         },
+  //         data: {
+  //           isCompleted: true,
+  //         },
+  //       });
+
+  //       // Clear Redis cache for this exercise as it's complete
+  //       await this.redis.del(key);
+  //     }
+
+  //     // Return response with updated status
+  //     return {
+  //       exerciseId: planExercise.exerciseId,
+  //       exerciseName: planExercise.exercise.name,
+  //       totalSets: planExercise.sets,
+  //       currentSet: dto.setNumber + 1,
+  //       lastCompletedSet: newSet,
+  //       completedSets: progress.completedSets,
+  //       remainingSets: planExercise.sets - progress.completedSets.length,
+  //       progress: (progress.completedSets.length / planExercise.sets) * 100,
+  //       isCompleted: progress.completedSets.length === planExercise.sets,
+  //       planProgress: {
+  //         totalExercises: planExercise.dailyPlan.exercises.length,
+  //         completedExercises: planExercise.dailyPlan.exercises.filter((ex) =>
+  //           ex.id === planExercise.id
+  //             ? progress.completedSets.length === planExercise.sets
+  //             : ex.isCompleted,
+  //         ).length,
+  //       },
+  //     };
+  //   } catch (error) {
+  //     console.error('Error recording set:', error);
+  //     throw error;
+  //   }
+  // }
 
   async getCurrentSetProgress(
     userId: string,
